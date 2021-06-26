@@ -185,7 +185,7 @@
     
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      2.4k 字
+      3.1k 字
     </span>
   
 
@@ -195,7 +195,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      24
+      34
        分钟
     </span>
   
@@ -269,6 +269,29 @@
 <h3 id="时序操作"><a href="#时序操作" class="headerlink" title="时序操作"></a>时序操作</h3><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">if</span> (map.containsKey(key)) &#123;<br>    map.remove(obj)<br>&#125;<br></code></pre></div></td></tr></table></figure>
 
 <p>代码中首先检查 map 中有没有 key 对应的元素，如果有则继续执行 remove 操作。此时，这个组合操作就是危险的，因为它是先检查后操作，而执行过程中可能会被打断。如果此时有两个线程同时进入 if() 语句，然后它们都检查到存在 key 对应的元素，于是都希望执行下面的 remove 操作，随后一个线程率先把 obj 给删除了，而另外一个线程它刚已经检查过存在 key 对应的元素，if 条件成立，所以它也会继续执行删除 obj 的操作，但实际上，集合中的 obj 已经被前面的线程删除了，这种情况下就可能导致线程安全问题。</p>
+<h3 id="死锁问题"><a href="#死锁问题" class="headerlink" title="死锁问题"></a>死锁问题</h3><p><strong>死锁产生的原因</strong></p>
+<p>• 互斥条件：线程要求对所分配的资源进行排他性控制,即在一段时间内某 资源仅为一个进程所占有.此时若有其他进程请求该资源.则请求进程只能等待.</p>
+<p>• 不剥夺条件：进程所获得的资源在未使用完毕之前,不能被其他进程强行夺走,即只能由获得该资源的线程自己来释放（只能是主动释放).</p>
+<p>• 请求和保持条件：线程已经保持了至少一个资源,但又提出了新的资源请求,而该资源已被其他线程占有,此时请求线程被阻塞,但对自己已获得的资源保持不放.</p>
+<p>• 循环等待条件：存在一种线程资源的循环等待链,链中每一个线程已获得的资源同时被链中下一个线程所请求。</p>
+<p>死锁的定义：“死锁是指两个或两个以上的进程在执行过程中，由于竞争资源或者由于彼此通信而造成的一种阻塞的现象，若无外力作用，它们都将无法推进下去。”</p>
+<p>一个更加规范的定义：“集合中的每一个进程都在等待只能由本集合中的其他进程才能引发的事件，那么该组进程是死锁的。”</p>
+<p>竞争的资源可以是：锁、网络连接、通知事件，磁盘、带宽，以及一切可以被称作“资源”的东西。</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DeadLock</span> </span>&#123;<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>&#123;<br><br>        <span class="hljs-keyword">final</span> Object a=<span class="hljs-keyword">new</span> Object();<br>        <span class="hljs-keyword">final</span> Object b=<span class="hljs-keyword">new</span> Object();<br><br>        Thread ta=<span class="hljs-keyword">new</span> Thread(()-&gt;&#123;<br>          <span class="hljs-keyword">synchronized</span> (a)&#123;<br>          <span class="hljs-keyword">try</span>&#123;<br>              System.out.println(<span class="hljs-string">&quot;线程a得到对象a上的锁&quot;</span>);<br>              Thread.sleep(<span class="hljs-number">1000</span>);<br>              <span class="hljs-keyword">synchronized</span> (b)&#123;<br>                  System.out.println(<span class="hljs-string">&quot;线程a获取b对象上的锁&quot;</span>);<br>              &#125;<br>          &#125;<span class="hljs-keyword">catch</span> (Exception e)&#123;<br>              e.printStackTrace();<br>          &#125;<br>          &#125;<br>        &#125;);<br>        Thread tb=<span class="hljs-keyword">new</span> Thread(()-&gt;&#123;<br>          <span class="hljs-keyword">synchronized</span> (b)&#123;<br>          <span class="hljs-keyword">try</span>&#123;<br>              System.out.println(<span class="hljs-string">&quot;线程b得到对象b上的锁&quot;</span>);<br>              Thread.sleep(<span class="hljs-number">1000</span>);<br>              <span class="hljs-keyword">synchronized</span> (a)&#123;<br>                  System.out.println(<span class="hljs-string">&quot;线程b获取a对象上的锁&quot;</span>);<br>              &#125;<br>          &#125;<span class="hljs-keyword">catch</span> (Exception e)&#123;<br>              e.printStackTrace();<br>          &#125;<br>          &#125;<br>        &#125;);<br>        ta.start();<br>        tb.start();<br>    &#125;<br>&#125;<br><br></code></pre></div></td></tr></table></figure>
+
+<p><strong>死锁排查</strong></p>
+<p>1.jps命令查看进程号</p>
+<p>jps<br>15188<br>11916 Launcher<br><strong>15404 DeadLock</strong><br>6988 Jps</p>
+<p>2.jstack 查看堆栈信息，</p>
+<p>E:\Ideaworkspace\Daily-leetcode&gt;<strong>jstack -F 15404</strong><br>Attaching to process ID 15404, please wait…<br>Debugger attached successfully.<br>Server compiler detected.<br>JVM version is 25.261-b12<br>Deadlock Detection:</p>
+<p>Found one Java-level deadlock:</p>
+<p>“Thread-1”:<br>  waiting to lock Monitor@0x0000029284659c38 (Object@0x00000000d6006170, a java/lang/Object),<br>  which is held by “Thread-0”<br>“Thread-0”:<br>  waiting to lock Monitor@0x000002928465c628 (Object@0x00000000d6006180, a java/lang/Object),<br>  which is held by “Thread-1”</p>
+<p>Found a total of 1 deadlock.</p>
+<p>3.jconsole </p>
+<p><strong>死锁预防</strong></p>
+<p>1.以确定的顺序获得锁</p>
+<p>2.超时放弃</p>
+<p>当使用synchronized关键词提供的内置锁时，只要线程没有获得锁，那么就会永远等待下去，然而Lock接口提供了<code>boolean tryLock(long time, TimeUnit unit) throws InterruptedException</code>方法，该方法可以按照固定时长等待锁，因此线程可以在获取锁超时以后，主动释放之前已经获得的所有的锁。通过这种方式，也可以很有效地避免死锁。</p>
 <h2 id="性能问题"><a href="#性能问题" class="headerlink" title="性能问题"></a>性能问题</h2><h3 id="上下文切换"><a href="#上下文切换" class="headerlink" title="上下文切换"></a>上下文切换</h3><p>上下文 是指某一时间点 CPU 寄存器和程序计数器的内容</p>
 <p>1.挂起一个线程 ，将这个线程程在 CPU 中的状态（上下文）存储于内存中的某处；</p>
 <p>2.恢复一个线程，在内存中检索下一个线程的上下文并将其在 CPU 的寄存器中恢复；</p>
