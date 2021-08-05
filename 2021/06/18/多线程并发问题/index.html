@@ -185,7 +185,7 @@
     
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      3.1k 字
+      3.4k 字
     </span>
   
 
@@ -195,7 +195,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      34
+      37
        分钟
     </span>
   
@@ -256,14 +256,25 @@
 <h3 id="Voliate"><a href="#Voliate" class="headerlink" title="Voliate"></a>Voliate</h3><p><strong>保证可见性</strong></p>
 <blockquote>
 <ol>
-<li>当写一个volatile变量时，JVM会把本地内存的变量强制刷新到主内存中</li>
-<li>这个写操作导致其他线程中的缓存无效，其他线程读，会从主内存读。volatile的写操作对其它线程实时可见。</li>
+<li><p>当写一个volatile变量时，JVM会把本地内存的变量强制刷新到主内存中</p>
+</li>
+<li><p>这个写操作导致其他线程中的缓存无效，其他线程读，会从主内存读。volatile的写操作对其它线程实时可见。</p>
+<p>（它会强制<strong>将缓存的修改操作立即写到主内存</strong>，写操作会导致其它CPU中的缓存行失效，写之后，其它线程的读操作会从主内存读。）</p>
+</li>
 </ol>
 </blockquote>
+<p>volatile之所以具有可见性，是因为底层中的Lock指令，该指令会将当前处理器缓存行的数据直接写会到系统内存中，且这个写回内存的操作会使在其他CPU里缓存了该地址的数据无效。</p>
 <p><strong>禁止指令重排序</strong></p>
-<p>1.它确保指令重排序时不会把其后面的指令排到内存屏障之前的位置，也不会把前面的指令排到内存屏障的后面；即在执行到内存屏障这句指令时，在它前面的操作已经全部完成；</p>
-<p>2.它会强制<strong>将缓存的修改操作立即写到主内存</strong></p>
-<p>3.写操作会导致其它CPU中的缓存行失效，写之后，其它线程的读操作会从主内存读。</p>
+<p>volatile之所以能防止指令重排序，是因为Java编译器对于volatile修饰的变量，会插入内存屏障。内存屏障会防止CPU处理指令的时候重排序的问题。</p>
+<p>在每个volatile写操作的前面插入一个storestore屏障。</p>
+<p>在每个volatile写操作的后面插入一个storeload屏障。</p>
+<p>在每个volatile读操作的后面插入一个loadload屏障。</p>
+<p>在每个volatile读操作的后面插入一个loadstore屏障。</p>
+<p>它确保指令重排序时不会把其后面的指令排到内存屏障之前的位置，也不会把前面的指令排到内存屏障的后面；即在执行到内存屏障这句指令时，在它前面的操作已经全部完成；</p>
+<p><strong>不具有原子性</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">x = <span class="hljs-number">10</span>;         <span class="hljs-comment">//单个操作，具有原子性</span><br>x++;            <span class="hljs-comment">//多个操作（读取x的值，将x的值+1，赋值给x），不具有原子性</span><br></code></pre></div></td></tr></table></figure>
+
+<p>在有多个操作的情况下，CPU任然可以先暂停然后在调度的。既然能被暂停后继续在调度，那么volatile肯定是不具备原子性的了。</p>
 <h1 id="多线程带来的问题"><a href="#多线程带来的问题" class="headerlink" title="多线程带来的问题"></a>多线程带来的问题</h1><h2 id="线程安全问题"><a href="#线程安全问题" class="headerlink" title="线程安全问题"></a>线程安全问题</h2><h3 id="共享资源"><a href="#共享资源" class="headerlink" title="共享资源"></a>共享资源</h3><p>所有线程的共享变量都存储在主内存中，每一个线程都有一个独有的工作内存，每个线程不直接操作在主内存中的变量，而是将主内存上变量的副本放进自己的工作内存中，只操作工作内存中的数据。当修改完毕后，再把修改后的结果放回到主内存中。每个线程都只操作自己工作内存中的变量，无法直接访问对方工作内存中的变量，线程间变量值的传递需要通过主内存来完成。</p>
 <p>如果有AB两个线程同时拿到变量i，进行递增操作。A线程将变量i放到自己的工作内存中，然后做+1操作，然而此时，线程A还没有将修改后的值刷回到主内存中，而此时线程B也从主内存中拿到修改前的变量i，也进行了一遍+1的操作。最后A和B线程将各自的结果分别刷回到主内存中，看到的结果就是变量i只进行了一遍+1的操作，而实际上A和B进行了两次累加的操作，于是就出现了错误。</p>
 <h3 id="时序操作"><a href="#时序操作" class="headerlink" title="时序操作"></a>时序操作</h3><figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">if</span> (map.containsKey(key)) &#123;<br>    map.remove(obj)<br>&#125;<br></code></pre></div></td></tr></table></figure>
@@ -332,9 +343,9 @@
                   <div class="post-meta">
                     <i class="iconfont icon-tags"></i>
                     
-                      <a class="hover-with-bg" href="/tags/Java/">Java</a>
-                    
                       <a class="hover-with-bg" href="/tags/%E5%A4%9A%E7%BA%BF%E7%A8%8B/">多线程</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Java/">Java</a>
                     
                   </div>
                 
@@ -350,6 +361,12 @@
                 <div class="post-prevnext">
                   <article class="post-prev col-6">
                     
+                    
+                      <a href="/2021/08/05/ElasticSearch/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">ElasticSearch</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
                     
                   </article>
                   <article class="post-next col-6">
